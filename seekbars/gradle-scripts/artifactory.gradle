@@ -1,0 +1,32 @@
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.github.dcendents.android-maven'
+
+group = 'mx.segundamano.doubleseekbarview'
+version = '1.0.0'
+
+task generateSourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier 'sources'
+}
+
+artifacts {
+    archives generateSourcesJar
+}
+
+bintray {
+    user = project.hasProperty('seekbars_bintray_user') ? project.seekbars_bintray_user : System.getenv()['SEEKBARS_BINTRAY_USERS']
+    key = project.hasProperty('seekbars_bintray_key') ? project.seekbars_bintray_key : System.getenv()['SEEKBARS_BINTRAY_KEY']
+    pkg {
+        repo = 'maven'
+        name = 'mx.segundamano.doubleseekbarview'
+        userOrg = 'segundamanomx'
+        version {
+            name = "$project.version"
+        }
+
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/segundamanomx/Seekbars.git'
+        websiteUrl = 'http://backstage.segundamano.mx'
+    }
+    configurations = ['archives']
+}

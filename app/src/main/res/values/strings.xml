@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">DoubleSeekBar</string>
+
+    <string name="inputMinValueHint">Input min value can be selected</string>
+    <string name="inputMaxValueHint">Input max value can be selected</string>
+
+    <string name="setMinValSelHint">Input min value selected</string>
+    <string name="setMaxValSelHint">Input max value selected</string>
+</resources>

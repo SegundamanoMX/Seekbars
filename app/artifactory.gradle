@@ -1,0 +1,26 @@
+apply plugin: "com.jfrog.artifactory"
+
+artifactory {
+    contextUrl = project.hasProperty('payments_artifactory_url') ? project.payments_artifactory_url : System.getenv()['PAYMENTS_ARTIFACTORY_URL']
+
+    publish {
+        repository {
+            repoKey = "libs-snapshot-local"
+            username = project.hasProperty('payments_artifactory_user') ? project.payments_artifactory_user : System.getenv()['PAYMENTS_ARTIFACTORY_USER']
+            password = project.hasProperty('payments_artifactory_password') ? project.payments_artifactory_password : System.getenv()['PAYMENTS_ARTIFACTORY_PASSWORD']
+            maven = true
+        }
+        defaults {
+            publications('dist')
+        }
+    }
+
+    resolve {
+        repository {
+            repoKey = 'libs-release'
+            username = project.hasProperty('payments_artifactory_user') ? project.payments_artifactory_user : System.getenv()['PAYMENTS_ARTIFACTORY_USER']
+            password = project.hasProperty('payments_artifactory_password') ? project.payments_artifactory_password : System.getenv()['PAYMENTS_ARTIFACTORY_PASSWORD']
+            maven = true
+        }
+    }
+}
