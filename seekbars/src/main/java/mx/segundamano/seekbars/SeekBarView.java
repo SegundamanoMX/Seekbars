@@ -63,6 +63,7 @@ public class SeekBarView extends View {
 
     public SeekBarView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        setSaveEnabled(true);
 
         TypedArray ta = context.getTheme().obtainStyledAttributes(attrs, R.styleable.seekbar, 0, 0);
         try{
@@ -326,11 +327,6 @@ public class SeekBarView extends View {
 
     @Override
     public void onRestoreInstanceState(Parcelable state) {
-        if(!(state instanceof SavedState)) {
-            super.onRestoreInstanceState(state);
-            return;
-        }
-
         SavedState ss = (SavedState) state;
         super.onRestoreInstanceState(ss.getSuperState());
         setDataMin(ss.minValue);
@@ -339,7 +335,7 @@ public class SeekBarView extends View {
         setSteps(ss.steps);
     }
 
-    private static class SavedState extends BaseSavedState {
+    static class SavedState extends BaseSavedState {
         int minValue;
         int maxValue;
         int actValue;
