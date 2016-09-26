@@ -402,6 +402,10 @@ public class DoubleSeekbarView extends View {
 
     @Override
     public void onRestoreInstanceState(Parcelable state) {
+        if(!(state instanceof SavedState)) {
+            super.onRestoreInstanceState(state);
+            return;
+        }
         SavedState ss = (SavedState) state;
         super.onRestoreInstanceState(ss.getSuperState());
         setMinValue(ss.minValue);
@@ -412,6 +416,7 @@ public class DoubleSeekbarView extends View {
     }
 
     static class SavedState extends BaseSavedState {
+        Parcelable superState;
         int minValue;
         int maxValue;
         int minActValue;
@@ -419,11 +424,13 @@ public class DoubleSeekbarView extends View {
         int steps;
 
         SavedState(Parcelable superState) {
-            super(superState);
+            super(EMPTY_STATE);
+            this.superState = superState;
         }
 
         private SavedState(Parcel in) {
             super(in);
+            superState = in.readParcelable(DoubleSeekbarView.SavedState.class.getClassLoader());
             minValue = in.readInt();
             maxValue = in.readInt();
             minActValue = in.readInt();
@@ -433,12 +440,13 @@ public class DoubleSeekbarView extends View {
 
         @Override
         public void writeToParcel(Parcel out, int flags) {
+            super.writeToParcel(out, flags);
+            out.writeParcelable(superState, flags);
             out.writeInt(minValue);
             out.writeInt(maxValue);
             out.writeInt(minActValue);
             out.writeInt(maxActValue);
             out.writeInt(steps);
-            super.writeToParcel(out, flags);
         }
 
         public static final Creator<SavedState> CREATOR = new Creator<SavedState>() {
