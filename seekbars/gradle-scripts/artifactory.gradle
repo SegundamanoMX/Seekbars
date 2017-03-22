@@ -2,7 +2,7 @@ apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
 
 group = 'mx.segundamano.doubleseekbarview'
-version = '1.0.4'
+version = '1.0.5'
 
 task generateSourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
