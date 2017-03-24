@@ -13,6 +13,8 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.RemoteViews.RemoteView;
 
 import java.util.ArrayList;
@@ -26,6 +28,11 @@ import java.util.zip.DataFormatException;
 @RemoteView
 public class DoubleSeekbarView extends View {
     private static final String TAG = DoubleSeekbarView.class.getSimpleName();
+
+    private static final int NO_ALPHA = 0xFF;
+    private static final int ALPHA = 0x99;
+    private static final int TIMEOUT_SEND_ACCESSIBILITY_EVENT = 200;
+    private AccessibilityEventSender mAccessibilityEventSender;
 
     //Drawing values
     private float drawMinActVal;
@@ -51,11 +58,11 @@ public class DoubleSeekbarView extends View {
     private Paint paintPointers = new Paint();
 
     //Data values
-    private int dataMin = 0;
-    private int dataMax = 10;
-    private int minDataValue = 0;
-    private int maxDataValue = 10;
-    private int steps = 1;
+    private int dataMin;
+    private int dataMax;
+    private int minDataValue;
+    private int maxDataValue;
+    private int steps;
     private List<Step> stepList;
 
     //Listener for callback values changes
@@ -75,9 +82,8 @@ public class DoubleSeekbarView extends View {
 
         TypedArray ta = context.getTheme().obtainStyledAttributes(attrs, R.styleable.seekbar, 0, 0);
         try{
-            paintPointers.setColor(ta.getColor(R.styleable.seekbar_pointerColor, ContextCompat.getColor(context, R.color.defaultPointerColor)));
-            paintRange.setColor(ta.getColor(R.styleable.seekbar_guideColor, ContextCompat.getColor(context, R.color.defaultGuideColor)));
-            paintGuide.setColor(ta.getColor(R.styleable.seekbar_baseColor,ContextCompat.getColor(context, R.color.defaultBaseColor)));
+            setColors(context, ta);
+            setValues(ta);
         } finally {
             ta.recycle();
         }
@@ -90,6 +96,20 @@ public class DoubleSeekbarView extends View {
         pressedRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12, getResources().getDisplayMetrics());
 
         normalPointers();
+    }
+
+    private void setColors(Context context, TypedArray ta) {
+        paintPointers.setColor(ta.getColor(R.styleable.seekbar_pointerColor, ContextCompat.getColor(context, R.color.defaultPointerColor)));
+        paintRange.setColor(ta.getColor(R.styleable.seekbar_guideColor, ContextCompat.getColor(context, R.color.defaultGuideColor)));
+        paintGuide.setColor(ta.getColor(R.styleable.seekbar_baseColor,ContextCompat.getColor(context, R.color.defaultBaseColor)));
+    }
+
+    private void setValues(TypedArray ta) {
+        minDataValue = ta.getInt(R.styleable.seekbar_minVal, 0);
+        maxDataValue = ta.getInt(R.styleable.seekbar_maxVal, 10);
+        steps = ta.getInt(R.styleable.seekbar_steps, 1);
+        dataMin = minDataValue;
+        dataMax = maxDataValue;
     }
 
     /**
@@ -238,8 +258,109 @@ public class DoubleSeekbarView extends View {
         }
     }
 
+    /**
+     * Get the actual color value in the base guide bar
+     * @return int color value
+     */
+    public int getGuideBarColor() {
+        return paintGuide.getColor();
+    }
+
+    /**
+     * Set guide bar color value
+     * @param color Guide bar color value
+     */
+    public void setGuideBarColor(int color) {
+        paintGuide.setColor(color);
+    }
+
+    /**
+     * Get the actual color value in the range bar
+     * @return int color value
+     */
+    public int getRangeBarColor() {
+        return paintRange.getColor();
+    }
+
+    /**
+     * Set range bar color value
+     * @param color Range bar color value
+     */
+    public void setPaintRange(int color) {
+        paintRange.setColor(color);
+    }
+
+    /**
+     * Get the actual color value in the pointers
+     * @return int color value
+     */
+    public int getPointersColor() {
+        return paintPointers.getColor();
+    }
+
+    /**
+     * Set pointers color value
+     * @param color Pointers color value
+     */
+    public void setPointersColor(int color) {
+        paintPointers.setColor(color);
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+
+        paintPointers.setAlpha(enabled ? NO_ALPHA : ALPHA);
+        paintRange.setAlpha(enabled ? NO_ALPHA : ALPHA);
+        paintGuide.setAlpha(enabled ? NO_ALPHA : ALPHA);
+
+        invalidate();
+    }
+
+    @Override
+    public CharSequence getAccessibilityClassName() {
+        return DoubleSeekbarView.class.getName();
+    }
+
+    @Override
+    public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
+        super.onInitializeAccessibilityEvent(event);
+        event.setItemCount(getMinValue());
+        event.setCurrentItemIndex(getMinDataValue());
+        event.setItemCount(getMaxValue());
+        event.setCurrentItemIndex(getMaxDataValue());
+    }
+
+    @Override
+    public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+        super.onInitializeAccessibilityNodeInfo(info);
+
+        if (isEnabled()) {
+            info.addAction(-1000920);
+        }
+    }
+
+    private void scheduleAccessibilityEventSender() {
+        if (mAccessibilityEventSender == null) {
+            mAccessibilityEventSender = new AccessibilityEventSender();
+        } else {
+            removeCallbacks(mAccessibilityEventSender);
+        }
+        postDelayed(mAccessibilityEventSender, TIMEOUT_SEND_ACCESSIBILITY_EVENT);
+    }
+
+    private class AccessibilityEventSender implements Runnable {
+        public void run() {
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SELECTED);
+        }
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if(!isEnabled()) {
+            return false;
+        }
+
         switch (event.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:
                 isLeftPressed(event.getX());

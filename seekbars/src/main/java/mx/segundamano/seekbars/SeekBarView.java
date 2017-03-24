@@ -13,17 +13,21 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.RemoteViews.RemoteView;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by diego on 17/05/16.
- */
 @RemoteView
 public class SeekBarView extends View {
     private static final String TAG = SeekBarView.class.getSimpleName();
+
+    private static final int NO_ALPHA = 0xFF;
+    private static final int ALPHA = 0x99;
+    private static final int TIMEOUT_SEND_ACCESSIBILITY_EVENT = 200;
+    private AccessibilityEventSender mAccessibilityEventSender;
 
     // Drawing values
     private float drawActVal;
@@ -44,10 +48,10 @@ public class SeekBarView extends View {
     private Paint paintPointer = new Paint();
 
     //Data values
-    private int dataMin = 0;
-    private int dataMax = 10;
+    private int dataMin;
+    private int dataMax;
     private int actDataValue;
-    private int steps = 1;
+    private int steps;
     private List<Step> stepList;
 
     //Listener for callback value changes
@@ -67,23 +71,32 @@ public class SeekBarView extends View {
 
         TypedArray ta = context.getTheme().obtainStyledAttributes(attrs, R.styleable.seekbar, 0, 0);
         try{
-            paintPointer.setColor(ta.getColor(R.styleable.seekbar_pointerColor, ContextCompat.getColor(context, R.color.defaultPointerColor)));
-            paintProgress.setColor(ta.getColor(R.styleable.seekbar_guideColor, ContextCompat.getColor(context, R.color.defaultGuideColor)));
+            setColors(context, ta);
+            setValues(ta);
         } finally {
             ta.recycle();
         }
 
         paintGuide.setAntiAlias(true);
-        paintGuide.setColor(ContextCompat.getColor(context, R.color.defaultBaseColor));
-
         paintProgress.setAntiAlias(true);
-
         paintPointer.setStyle(Paint.Style.FILL);
         paintPointer.setAntiAlias(true);
 
         stepList = new ArrayList<>();
 
         normalPointer();
+    }
+
+    private void setColors(Context context, TypedArray ta) {
+        paintPointer.setColor(ta.getColor(R.styleable.seekbar_pointerColor, ContextCompat.getColor(context, R.color.defaultPointerColor)));
+        paintProgress.setColor(ta.getColor(R.styleable.seekbar_guideColor, ContextCompat.getColor(context, R.color.defaultGuideColor)));
+        paintGuide.setColor(ta.getColor(R.styleable.seekbar_guideColor, ContextCompat.getColor(context, R.color.defaultBaseColor)));
+    }
+
+    private void setValues(TypedArray ta) {
+        dataMin = ta.getInt(R.styleable.seekbar_minVal, 0);
+        dataMax = ta.getInt(R.styleable.seekbar_maxVal, 10);
+        steps = ta.getInt(R.styleable.seekbar_steps, 1);
     }
 
     /**
@@ -197,8 +210,108 @@ public class SeekBarView extends View {
         }
     }
 
+    /**
+     * Get the actual color value in the base guide bar
+     * @return int color value
+     */
+    public int getGuideBarColor() {
+        return paintGuide.getColor();
+    }
+
+    /**
+     * Set guide bar color value
+     * @param color Guide bar color value
+     */
+    public void setGuideBarColor(int color) {
+        paintGuide.setColor(color);
+    }
+
+    /**
+     * Get the actual color value in the range bar
+     * @return int color value
+     */
+    public int getRangeBarColor() {
+        return paintProgress.getColor();
+    }
+
+    /**
+     * Set range bar color value
+     * @param color Range bar color value
+     */
+    public void setPaintRange(int color) {
+        paintProgress.setColor(color);
+    }
+
+    /**
+     * Get the actual color value in the pointers
+     * @return int color value
+     */
+    public int getPointersColor() {
+        return paintPointer.getColor();
+    }
+
+    /**
+     * Set pointers color value
+     * @param color Pointers color value
+     */
+    public void setPointersColor(int color) {
+        paintPointer.setColor(color);
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+
+        paintPointer.setAlpha(enabled ? NO_ALPHA : ALPHA);
+        paintProgress.setAlpha(enabled ? NO_ALPHA : ALPHA);
+        paintGuide.setAlpha(enabled ? NO_ALPHA : ALPHA);
+
+        invalidate();
+    }
+
+    @Override
+    public CharSequence getAccessibilityClassName() {
+        return DoubleSeekbarView.class.getName();
+    }
+
+    @Override
+    public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
+        super.onInitializeAccessibilityEvent(event);
+        event.setItemCount(getDataMax());
+        event.setCurrentItemIndex(getActDataValue());
+    }
+
+    @Override
+    public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+        super.onInitializeAccessibilityNodeInfo(info);
+
+        if (isEnabled()) {
+            info.addAction(-1000920);
+        }
+    }
+
+    private void scheduleAccessibilityEventSender() {
+        if (mAccessibilityEventSender == null) {
+            mAccessibilityEventSender = new AccessibilityEventSender();
+        } else {
+            removeCallbacks(mAccessibilityEventSender);
+        }
+        postDelayed(mAccessibilityEventSender, TIMEOUT_SEND_ACCESSIBILITY_EVENT);
+    }
+
+    private class AccessibilityEventSender implements Runnable {
+        public void run() {
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SELECTED);
+        }
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if(!isEnabled()) {
+            return false;
+        }
+
+
         switch (event.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:
                 pressedPointer();

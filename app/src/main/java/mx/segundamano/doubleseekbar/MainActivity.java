@@ -1,9 +1,10 @@
 package mx.segundamano.doubleseekbar;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import mx.segundamano.seekbars.DoubleSeekbarView;
@@ -24,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
 
         final TextView seekbarValues = (TextView) findViewById(R.id.double_seekbar_values);
         doubleSeekbarView = (DoubleSeekbarView) findViewById(R.id.double_seekbar);
+        doubleSeekbarView.setEnabled(false);
 
         assert doubleSeekbarView != null;
         doubleSeekbarView.setOnValuesChangeListener(new DoubleSeekbarView.OnValuesChangeListener() {
